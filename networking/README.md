@@ -1,13 +1,34 @@
 # Networking
+## Diagram
+[Network Diagram](https://miro.com/app/board/uXjVKkbvlZQ=/?moveToWidget=3458764603058569259&cot=14)
 
-## Proxmox host 
+## Proxmox Host 
 Proxmox host networking is defined in /etc/network/interfaces
 ```
 auto lo
 iface lo inet loopback
 
-iface enp1s0 inet manual
+# USB - Bus 004 Device 004: ID 0bda:8153 Realtek Semiconductor Corp. RTL8153 Gigabit Ethernet Adapter
+auto enx00e04c68038b
+iface enx00e04c68038b
 
+auto dmzbr0
+iface dmzbr0 inet static
+        address 192.168.1.35/24
+        gateway 192.168.1.1
+        bridge-ports enx00e04c68038b
+        bridge-stp off
+        bridge-fd 0
+#       ip-forward on
+
+
+# PCI - 02:00.0 Network controller: Intel Corporation Wi-Fi 6 AX200 (rev 1a)
+# auto wlx18d6c70f01f1
+# iface wlx18d6c70f01f1 inet dhcp
+
+# PCI - 01:00.0 Ethernet controller: Realtek Semiconductor Co., Ltd. RTL8111/8168/8411 PCI Express Gigabit Ethernet Controller (rev 15)
+#
+iface enp1s0 inet manual
 auto vmbr0
 iface vmbr0 inet static
         address 192.168.2.35/24
@@ -15,8 +36,8 @@ iface vmbr0 inet static
         bridge-ports enp1s0
         bridge-stp off
         bridge-fd 0
+        ip-forward on
 
-iface wlo1 inet manual
 
 source /etc/network/interfaces.d/*
 ```
@@ -147,3 +168,31 @@ on each of the 2 bridges
 | Connection Type                                    | Throughput |
 | -------------------------------------------------- | ---------- |
 | VM-to-VM different Bridges through a VM (router)   | 4.5Gbps    |
+
+# Private Cloud Networking
+Egress routing under normal conditions uses my NOS router, the NGGW2 firewall forwards directly to the NOS Router (NOSGAteway)
+Should the NOS router become unavailable the firewall (NGGW2) will use its second best option the IG, which uses the underlying host's (beelink's)
+WiFi to connecto to a mobile data network (ex. through a hotpsot on my phone)
+
+## Gateways
+
+Corp ----- (CORP) NGGW2 (WAN) ----- (Gateway Group: InternetAccess) ----- tier 1 -----> NOSGateway (192.168.1.1)
+                    |                                               |
+                  (RTN)                                             |--- tier 2 -----> IG (192.168.1.3) ----- NOSGateway (192.168.1.1)
+                    |                                                                                   |
+                                                                                                        |---- WIFI 
+
+## BGP
+NGGW2 (pfsense) runs a BGP instance and advertises its connected routes
+Currently the only neighbor is the IG (192.168.1.3) 
+
+## IG
+This is an Internet Gateway that serves the purposes of providing Internet access to the provate cloud 
+through mobile data connection over its WiFi interface.
+IG has iptables set to Masquerade outbound traffic on its interfaces
+```
+Chain POSTROUTING (policy ACCEPT 43 packets, 2580 bytes)
+ pkts bytes target     prot opt in     out     source               destination         
+ 1555  118K MASQUERADE  all  --  *      wls16   0.0.0.0/0            0.0.0.0/0           
+ 1115 81572 MASQUERADE  all  --  *      eth0    192.168.0.0/16      !192.168.0.0/16  
+```
