@@ -1,0 +1,15 @@
+--- # comment
+# - name: Shutdown Vault
+#   hosts: vault
+#   become: true
+#   tasks:
+#   - name: Stop Vault
+#     ansible.builtin.systemd:
+#       name: vault
+#       state: stopped
+- name: Power Off all servers
+  hosts: all
+  become: true
+  tasks:
+  - name: Shutdown server
+    ansible.builtin.command: "shutdown now"

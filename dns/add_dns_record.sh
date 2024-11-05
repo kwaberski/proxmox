@@ -19,7 +19,7 @@ REVERSE_IP="${ip_parts[3]}.${ip_parts[2]}"
 REVERSE_ZONE="${ip_parts[1]}.${ip_parts[0]}.in-addr.arpa"
 
 # Add reverse record
-# pdnsutil add-record "$REVERSE_ZONE" "$REVERSE_IP" PTR "$HOSTNAME"
-echo "$REVERSE_ZONE" "$REVERSE_IP" PTR "$HOSTNAME.$ZONE"
+pdnsutil add-record "$REVERSE_ZONE" "$REVERSE_IP" PTR "$HOSTNAME.$ZONE"
+#echo "$REVERSE_ZONE" "$REVERSE_IP" PTR "$HOSTNAME.$ZONE"
 
 echo "Forward and reverse records added successfully."

@@ -1,0 +1,8 @@
+[vault]
+vault.corp.guardanet.net ansible_user=krzys
+[others]
+ns1.guardanet.net ansible_user=krzys
+ig.dmz.guardanet.net ansible_user=krzys
+c0w1.az1.t01.infra.guardanet.net ansible_user=krzys
+c0m1.az1.t01.infra.guardanet.net ansible_user=krzys
+192.168.4.11 ansible_user=krzys
