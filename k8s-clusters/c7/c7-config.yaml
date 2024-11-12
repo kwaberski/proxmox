@@ -1,0 +1,4 @@
+write-kubeconfig-mode: "0644"
+token: "12345"
+cluster-domain: c7.local
+#node-taint: CriticalAddonsOnly=true:NoExecute

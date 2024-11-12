@@ -1,0 +1,30 @@
+apiVersion: audit.k8s.io/v1
+kind: Policy
+rules:
+# do not log requests to the following 
+- level: None
+  nonResourceURLs:
+  - "/healthz*"
+  - "/logs"
+  - "/metrics"
+  - "/swagger*"
+  - "/version"
+
+# limit level to Metadata so token is not included in the spec/status
+- level: RequestResponse
+  verbs: 
+  - create
+  resources:
+  - group: authentication.k8s.io
+    resources:
+    - tokenreviews
+    - tokenrequests
+
+# extended audit of auth delegation
+- level: RequestResponse
+  omitStages:
+  - RequestReceived
+  resources:
+  - group: authorization.k8s.io
+    resources:
+    - subjectaccessreviews

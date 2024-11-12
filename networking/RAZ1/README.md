@@ -116,7 +116,6 @@ exit
 !
 router bgp 65001 vrf T01
  bgp router-id 192.168.32.1
- neighbor 192.168.32.6 remote-as 65001
  neighbor 192.168.32.65 remote-as 65001
  !
  address-family ipv4 unicast

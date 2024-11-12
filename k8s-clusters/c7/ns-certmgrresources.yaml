@@ -1,0 +1,68 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: $NAMESPACE
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: issuer
+  namespace: $NAMESPACE
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: issuer
+  namespace: $NAMESPACE
+rules:
+  - apiGroups: ['']
+    resources: ['serviceaccounts/token']
+    resourceNames: ['issuer']
+    verbs: ['create']
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: issuer
+  namespace: $NAMESPACE
+subjects:
+  - kind: ServiceAccount
+    name: cert-manager
+    namespace: $CM_NAMESPACE
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: issuer
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: issuer-tokenreview
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+- kind: ServiceAccount
+  name: issuer
+  namespace: $NAMESPACE
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: issuer
+  namespace: $NAMESPACE
+spec:
+  vault:
+    path: guardanet_corp/v1/ica1/v1/sign/guardanet-net
+    server: https://vault.corp.guardanet.net:8200
+    caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUMwRENDQWpHZ0F3SUJBZ0lRRWp3WExyRXNaNnBPWWRsMnJNeFp1REFLQmdncWhrak9QUVFEQkRCY01STXcKRVFZS0NaSW1pWlB5TEdRQkdSWURibVYwTVJrd0Z3WUtDWkltaVpQeUxHUUJHUllKWjNWaGNtUmhibVYwTVJRdwpFZ1lLQ1pJbWlaUHlMR1FCR1JZRVkyOXljREVVTUJJR0ExVUVBeE1MUTI5eWNDMVNiMjkwUTBFd0hoY05Nak13Ck5UQTFNVFkwTmpJMVdoY05Nall3TlRBME1UWTFOakkxV2pCY01STXdFUVlLQ1pJbWlaUHlMR1FCR1JZRGJtVjAKTVJrd0Z3WUtDWkltaVpQeUxHUUJHUllKWjNWaGNtUmhibVYwTVJRd0VnWUtDWkltaVpQeUxHUUJHUllFWTI5eQpjREVVTUJJR0ExVUVBeE1MUTI5eWNDMVNiMjkwUTBFd2dac3dFQVlIS29aSXpqMENBUVlGSzRFRUFDTURnWVlBCkJBQ0dzS2EwVzJjOGdGU2pqTnQ3V0NlWGxyZEhYYW01ckpXUEt2Nll1RU1DaVVuNDlYMEl3R0toeEVZQTZqNkoKYnRQQUJmbzR4TmRkZzJsM2xoeU9kcFFFQ3dDams3ZXRkRGRiRUZOZTBxKy9ZMjBpUldyeVl2ZnF3d0Y1d01kWQpJUHZNbVJmVEpMeDRHYzdwMC9iODFacjhBWGJEaVRnWUc4UXMzcFVZZmlTYzZFQnlOcU9Ca1RDQmpqQVRCZ2tyCkJnRUVBWUkzRkFJRUJoNEVBRU1BUVRBT0JnTlZIUThCQWY4RUJBTUNBWVl3RHdZRFZSMFRBUUgvQkFVd0F3RUIKL3pBZEJnTlZIUTRFRmdRVURvK2x0VlNCT1J6V3lmV3paeEN2ZlVBazNXNHdFZ1lKS3dZQkJBR0NOeFVCQkFVQwpBd0VBQVRBakJna3JCZ0VFQVlJM0ZRSUVGZ1FVVlNHbHQ3RTl2NWMyR0FCbkJCbnIvRjN3U2Zrd0NnWUlLb1pJCnpqMEVBd1FEZ1l3QU1JR0lBa0lCcUVOdTV2THhqekNkUk1WTHZ2S3ZvRnpXeEd1aUNLYkJ2cmFNditLeTR1Y3MKd1pWZ2FuSG5uVkp0ZWgvOWtHYVBzKzB4T0VoWUVFUFlNNnFVTm92aGc1d0NRZ0ZCY0IyYk41V3hnM2dzL0N1VQoxK0x3dUJWQUNOcmpvdU8zT2tHTXRmblNDYmdLVGlPaDJ6SW5icXVhMFkydXRFNXR2YnBlV2dtb2dadlVHR0tECnFWQnVKZz09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+    auth:
+      kubernetes:
+        role: issuer
+        mountPath: /v1/auth/kubernetes/c7
+        serviceAccountRef:
+          name: issuer
+          audiences:
+          - "https://kubernetes.default.svc.c7.local"
