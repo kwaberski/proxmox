@@ -132,10 +132,48 @@ helm upgrade --install \
   --version v1.16.1 \
   --values values.yaml
 
-# create vault namespace and install RBAC and issuer
-# make sure you update the issuer spec so that the audience claim is set with correct cluster domain
+# Install cert-manager csi-driver
+helm upgrade cert-manager-csi-driver jetstack/cert-manager-csi-driver \
+  --install \
+  --namespace pl-cert-manager \
+  --wait
+
+
+# install issuer roles etc
+cd /home/kwaberski/Github/rancher
+NAMESPACE=cattle-system CM_NAMESPACE=pl-cert-manager envsubst < ns-certmgrresources.yaml | k apply -f -
+
+!!! IMPORTANT
+# make sure the audience you put in the issuer yaml spec has your clusters domain name, ex. 
 # "https://kubernetes.default.svc.c7.local"
-NAMESPACE=vault CM_NAMESPACE=pl-cert-manager envsubst < ns-certmgrresources.yaml | k apply -f -
 
+# install Ingress
+$ cd ~/Github/k8s-pl-ingress-nginx
+$ helm upgrade --install ingress-nginx ingress-nginx \
+--repo https://kubernetes.github.io/ingress-nginx \
+--values values.yaml \
+--namespace=pl-ingress-nginx --create-namespace
 
+# Install NFS provisionner and StorageClass
+cd /home/kwaberski/Github/k8s-pl-storage
+NAMESPACE=pl-nfs-storage NFS_SERVER_IP=192.168.2.9 envsubst < pl-storage.yaml | k apply -f -
 
+# Install remaining masters
+# on every master
+for m in c7m2.az2.t01 c7m3.az3.t01; do 
+  scp c7-config.yaml krzys@${m}:.
+  scp audit.yaml  krzys@${m}:.
+  ssh krzys@${m} bash -c "mkdir -p /var/lib/rancher/k3s/server/ && cp audit.yaml /var/lib/rancher/k3s/server/"
+done
+
+# You need to get the full token from the 1st master
+# sudo cat /var/lib/rancher/k3s/server/token
+
+curl -sfL https://get.k3s.io | K3S_TOKEN=$TOKEN \
+K3S_CONFIG_FILE=c7-config.yaml INSTALL_K3S_VERSION=v1.30.6+k3s1 \
+INSTALL_K3S_EXEC="--flannel-backend=none --disable-network-policy --disable=servicelb --disable traefik \
+server --server https://c7.guardanet.net:6443 --tls-san 192.168.32.196 --tls-san c7.guardanet.net --tls-san c7m2.az2.t01.infra.guardanet.net \
+--user krzys --write-kubeconfig-mode 644 --write-kubeconfig-group 1000 --cluster-domain c7.local \
+--kube-apiserver-arg=service-account-issuer=https://c7.guardanet.net:6443 \
+--kube-apiserver-arg=audit-log-path=/var/lib/rancher/k3s/server/logs/audit.log \
+--kube-apiserver-arg=audit-policy-file=/var/lib/rancher/k3s/server/audit.yaml" sh -
